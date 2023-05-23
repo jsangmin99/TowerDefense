@@ -4,43 +4,45 @@ using UnityEngine;
 
 public class Enemy : MonoBehaviour
 {
-    //public GameObject tower;
     public int moneyGain = 100;
     public float speed = 10f;
-
     public float startHealth = 100;
+    public int attackDamage = 10;
 
-    private float meetSpeed = 10f;
-
-    private Transform target;
-    private float health;
-
-    //public Image healthBar;
-    private int waypointCount = 0;
     public float defense = 0f;
+
+    
+    private float meetSpeed = 10f;
+    private Transform target;
+    public float health;
+    private int waypointCount = 0;
+
+    private GameObject currentTarget; // 현재 타겟
+
+    private bool isAttacking = false; // 공격 중인지 여부를 나타내는 변수
+    private Rigidbody rb;
 
     void Start()
     {
         target = Waypoints.points[0];
-
-        //transform.Rotate(0, 228.461539f, 0);
-        
-
         health = startHealth;
+        currentTarget = target.gameObject;
+
+        rb = GetComponent<Rigidbody>();
+        rb.isKinematic = true; // 물리 시뮬레이션에 영향을 받지 않도록 Rigidbody를 kinematic으로 설정
     }
-    
+
     void Update()
     {
-        
-        //transform.RotateAround(tower.transform.position, Vector3.down, speed*Time.deltaTime );
-        //transform.position += transform.forward * speed * Time.deltaTime;
-        //transform.Rotate(0f, -1f, 0f);
+;
+        if (currentTarget.CompareTag("Melee") && currentTarget.GetComponent<MeleeUnit>().health <= 0)
+        {
+            currentTarget = target.gameObject;
+        }
 
-        Vector3 dir = target.position - transform.position;
+        Vector3 dir = currentTarget.transform.position - transform.position;
         transform.Translate(dir.normalized * speed * Time.deltaTime, Space.World);
 
-        //Enemy look Foward. Reference youtuber Brackeys.
-        // And message pops
         if (dir != Vector3.zero)
         {
             Quaternion enemyLook = Quaternion.LookRotation(dir);
@@ -48,44 +50,63 @@ public class Enemy : MonoBehaviour
             transform.rotation = Quaternion.Euler(0f, rotation.y, 0f);
         }
         
-        
-
-        if (Vector3.Distance(transform.position, target.position) <= 0.3f)
+        if (Vector3.Distance(transform.position, currentTarget.transform.position) <= 0.3f)
         {
-            GetNextWaypoint();
+            if (currentTarget.CompareTag("Melee"))
+            {
+                MeleeUnit meleeUnit = currentTarget.GetComponent<MeleeUnit>();
+                if (meleeUnit != null && !isAttacking)
+                {
+                    meleeUnit.TakeDamage(attackDamage);
+                    StartCoroutine(AttackDelay());
+                }
+            }
+            else
+            {
+                GetNextWaypoint();
+            }
         }
+    Debug.Log("Enemy: currentTarget = " + currentTarget);
+    Debug.Log("Enemy: isAttacking = " + isAttacking);
     }
 
     void GetNextWaypoint()
     {
-        if (waypointCount == Waypoints.points.Length - 1)
+        if (waypointCount >= Waypoints.points.Length - 1)
         {
             waypointCount = 1;
             target = Waypoints.points[waypointCount];
-            waypointCount++;
-            defense++;
         }
         else
         {
             waypointCount++;
             target = Waypoints.points[waypointCount];
         }
-        //transform.Rotate(0, -13.846153f, 0);
+        currentTarget = target.gameObject;
     }
 
     public void TakeDamage(float amount)
     {
-        //health -= amount;
-
-        // 피해량 = 데미지(amount) + 100 / (100+방어력)
         health -= amount * 100 / (100 + defense);
 
-        //healthBar.fillAmount = health / startHealth;
-
-        if(health <= 0f)
+        if (health <= 0f)
         {
             Die();
         }
+    }
+
+    IEnumerator AttackDelay()
+    {
+        isAttacking = true;
+
+        // 공격 대기 시간 설정
+        float attackDelay = 1f; // 적당한 값으로 설정해주세요
+
+        yield return new WaitForSeconds(attackDelay);
+
+        isAttacking = false;
+                Debug.Log("Enemy: Attack finished");
+
     }
 
     void Die()
@@ -94,4 +115,16 @@ public class Enemy : MonoBehaviour
         Destroy(gameObject);
     }
 
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Melee"))
+        {
+            MeleeUnit meleeUnit = other.GetComponent<MeleeUnit>();
+            if (meleeUnit != null && !isAttacking)
+            {
+                currentTarget = other.gameObject;
+                StartCoroutine(AttackDelay());
+            }
+        }
+    }
 }
