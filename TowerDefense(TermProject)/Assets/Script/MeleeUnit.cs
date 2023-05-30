@@ -49,8 +49,7 @@ public class MeleeUnit : MonoBehaviour
     IEnumerator AttackEnemy()
     {
         isAttacking = true;
-                Debug.Log("MeleeUnit: Attacking");
-
+        Debug.Log("MeleeUnit: Attacking");
 
         // 이동을 멈추고 적을 향해 회전
         Vector3 direction = currentEnemy.transform.position - transform.position;
@@ -66,8 +65,8 @@ public class MeleeUnit : MonoBehaviour
         }
 
         isAttacking = false;
-                Debug.Log("MeleeUnit: Attack finished");
-
+        Debug.Log("MeleeUnit: Attack finished");
+        currentEnemy = null; // 현재 공격 중인 적 해제
     }
 
     public void TakeDamage(float damage)
@@ -82,16 +81,20 @@ public class MeleeUnit : MonoBehaviour
 
     void Die()
     {
-        // 현재 공격 중인 적 해제
-        currentEnemy = null;
+        if (currentEnemy != null)
+        {
+            currentEnemy.StopAttacking(); // 공격 중인 적이 있다면 공격 중단
+        }
+
         // 아군 근접 유닛이 사망할 때의 동작 구현
         Destroy(gameObject);
     }
 
     void OnTriggerEnter(Collider other)
     {
-        if (other.CompareTag("Enemy"))
+        if (other.CompareTag("Enemy") || other.CompareTag("Melee")) // 상대방 태그 확인
         {
+            Debug.Log("MeleeUnit: OnTriggerEnter");
             Enemy enemy = other.GetComponent<Enemy>();
             if (enemy != null && !isAttacking)
             {
@@ -99,5 +102,12 @@ public class MeleeUnit : MonoBehaviour
                 StartCoroutine(AttackEnemy());
             }
         }
+    }
+
+    public void StopAttacking()
+    {
+        StopAllCoroutines(); // 모든 공격 코루틴 중지
+        isAttacking = false;
+        currentEnemy = null;
     }
 }

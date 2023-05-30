@@ -6,37 +6,35 @@ public class WaveSpawner : MonoBehaviour
 {
     public Transform enemyPrefab;
     public Transform spawnPoint;
-    public float timeBetweenWaves = 5f;
+    public float timeBetweenEnemies = 1f;
+    public int numberOfEnemies = 10; // 스폰할 총 적 수
 
-    private float countdown = 2f;
-    //수정
-    private int waveIndex = 0;
+    private int enemiesSpawned = 0;
 
-    private void Update()
+    private void Start()
     {
-        if (countdown <= 0f)
-        {
-            //함수 추가-
-            StartCoroutine(SpawnWave());
-            countdown = timeBetweenWaves;
-        }
-        countdown -= Time.deltaTime;
+        StartCoroutine(SpawnEnemies());
     }
-    //코루틴 수정
-    IEnumerator SpawnWave()
+
+    IEnumerator SpawnEnemies()
     {
-        waveIndex++;
-        for (int i = 0; i < waveIndex; i++)
+        while (enemiesSpawned < numberOfEnemies)
         {
             SpawnEnemy();
-            //추가
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(timeBetweenEnemies);
         }
-
     }
 
     private void SpawnEnemy()
     {
-        Instantiate(enemyPrefab, spawnPoint.position, spawnPoint.rotation);
+        Transform enemyTransform = Instantiate(enemyPrefab, spawnPoint.position, spawnPoint.rotation);
+        Enemy enemy = enemyTransform.GetComponent<Enemy>();
+        enemy.OnDestroyed += OnEnemyDestroyed;
+        enemiesSpawned++;
+    }
+
+    private void OnEnemyDestroyed(Enemy enemy)
+    {
+        // enemy 파괴 시 수행할 동작 작성
     }
 }
